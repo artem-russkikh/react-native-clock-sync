@@ -16,10 +16,16 @@
     "clock",
     "sync"
   ],
-  "author": "Artem Russkikh <rusartx@gmail.com> (http://artem-russkikh.ru/)",
+  "author": "jordan l piepkow",
+  "contributors": [
+    "Artem Russkikh <rusartx@gmail.com> (http://artem-russkikh.ru/)"
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/artem-russkikh/react-native-clock-sync/issues"
   },
-  "homepage": "https://github.com/artem-russkikh/react-native-clock-sync#readme"
+  "homepage": "https://github.com/artem-russkikh/react-native-clock-sync#readme",
+  "dependencies": {
+    "react-native-ntp-client": "0.5.5"
+  }
 }
