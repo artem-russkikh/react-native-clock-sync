@@ -1,0 +1,25 @@
+{
+  "name": "react-native-clock-sync",
+  "version": "1.0.0",
+  "description": "Sync clock across mobile devices using NTP",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artem-russkikh/react-native-clock-sync.git"
+  },
+  "keywords": [
+    "react-native",
+    "ntp",
+    "clock",
+    "sync"
+  ],
+  "author": "Artem Russkikh <rusartx@gmail.com> (http://artem-russkikh.ru/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/artem-russkikh/react-native-clock-sync/issues"
+  },
+  "homepage": "https://github.com/artem-russkikh/react-native-clock-sync#readme"
+}
