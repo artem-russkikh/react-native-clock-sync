@@ -52,7 +52,7 @@ The clock constructor can accept the following options.  **all options are optio
 
 * ```syncDelay``` (number) : The time (in seconds) between each call to an NTP server to get the latest UTC timestamp. Defaults to `300` (which is 5 minutes).
 * ```history``` (number) : The number of delta values that should be maintained and used for calculating your local time drift. Defaults to `10`.
-* ```startOnline``` (boolean) : A flag to prevent attempting network activity upon clockSync instantiation. Defaults to `true`. (immediate NTP server fetch attempt)
+* ```startOnline``` (boolean) : A flag to control network activity upon clockSync instantiation. Defaults to `true`. (immediate NTP server fetch attempt)
 
 ```javascript
 {
@@ -65,8 +65,8 @@ The clock constructor can accept the following options.  **all options are optio
 
 ##### Server Options
 
-* ```cycleServers``` (boolean) : A flag to allow for 'wrapping around' back to the beginning of the servers list (if > 1 are specified). Upon a network error, clockSync will attempt to use the next server in the list. Defaults to `false` (advance to last item and remain there regardless of additional errors encountered)
-* ```servers``` (array) : An optional array of NTP servers to use when looking up time. If no *servers* key exists in the *config* object, the default NTP configuration will be  `pool.ntp.org` at port `123`. Otherwise, Items in the array may be in **any** of the following forms (mixed values are allowed):
+* ```cycleServers``` (boolean) : A flag to allow for 'wrapping around' back to the beginning of the servers list (if > 1 are specified). Upon a network error, clockSync will attempt to use the next server in the list until it reaches the end. When `cycleServers === true`, it will wrap back to the first item and move through the list again. Defaults to `false` (advance to last item and remain there regardless of additional errors encountered)
+* ```servers``` (array) : An optional array of NTP servers to use when looking up time. If no *servers* key exists in the *config* object, the default NTP configuration will be  `pool.ntp.org` at port `123`. Otherwise, items in the array may be in **any** of the following forms (mixed values are allowed):
  * (string) `"ntp.server.name"` - when a single string value is provided, it will be automatically associated with the default port number `123`
  * (object) with the keys ```server``` and ```port```. Only `server` is **required**. If `port` is omitted, it will be defaulted to `123`. Server values must be strings. Port values must be numbers.
 
@@ -82,16 +82,16 @@ These are some examples of acceptable server configurations:
   "servers": [
     "foo.bar.com",
     "baz.bat.qux",
-    "pool.npt.org"
+    "pool.ntp.org"
   ]
 }
 
-// formats can be mixed
+// formats may be mixed
 {
   "servers": [
-    "foo.bar.baz", /* default port */
-    {"server": "a.b.c"}, /* default port */
-    "x.y.z", /* default port */
+    "foo.bar.baz",        /* default port */
+    {"server": "a.b.c"},  /* default port */
+    "x.y.z",              /* default port */
     {"server": "aaa.bbb.ccc", "port": 456} /* fully specified */
   ]
 }
@@ -135,13 +135,13 @@ clock.getTime();
 
 ### setOnline(boolean)
 
-Sets the current (per-instance) network status. Passing an argument of `true` (if the current status is `false`) will cause the instance to immediately attempt an NTP fetch, and resume the internal update timer at a frequency determined by the `syncDelay` config parameter (or its default). Conversely, passing `false` (when current is `true`) Immediately stops the internal timer and prevents any further network activity. **NOTE:** Calling this method with an argument that matches the instance's current network state results in a no-op.
+Sets the current (per-instance) network status. Passing an argument of `true` (if the current status is `false`) will cause the instance to immediately attempt an NTP fetch, and resume the internal update timer at a frequency determined by the `syncDelay` config parameter (or its default). Conversely, passing `false` (when current is `true`) immediately stops the internal timer and prevents any further network activity. **NOTE:** Calling this method with an argument that matches the instance's current network state results in a no-op.
 
 #### Offline behavior
 
 When set to *offline*, calls to `getTime()` will return the current device time adjusted by whatever values are currently in the history. (or no adjustment if the history is empty/NTP has never been fetched)
 
-Calls to `syncTime()` are effectively a no-op in offline mode. No NTP fetch will be performed, and no updates to the local time history will be made.
+Calls to `syncTime()` are effectively a no-op in offline mode. No NTP fetch will be performed, and no updates to the local time history will be made (to prevent polluting the running average drift).
 
 #### Example
 
