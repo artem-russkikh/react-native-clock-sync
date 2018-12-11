@@ -4,11 +4,11 @@ var clockSync = function (config) {
     config = {};
   }
 
-  if (config.servers) {
+  if (config.hasOwnProperty('servers')) {
     this.ntpServers = [];
     try {
       config.servers.forEach(function (s, i) {
-        if (typeof s === 'string') {
+        if (typeof s === 'string' && s.length > 0) {
           this.ntpServers.push({
             server: s,
             port: this.client.defaultNtpPort
