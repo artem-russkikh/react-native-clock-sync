@@ -228,8 +228,7 @@ describe('v1.1.0 behavior', () => {
       jest.useFakeTimers();
     });
 
-    test('getHistory method; general', () => {
-      // 1.1.0 verboseHistory default false
+    test('getHistory method; deltas array', () => {
       const config = {
         history: 5,
         startOnline: false,
@@ -257,7 +256,7 @@ describe('v1.1.0 behavior', () => {
       expect(h.deltas).toHaveLength(config.history);
     });
 
-    test('getHistory method; verboseHistory false', () => {
+    test('getHistory method; deltas array values', () => {
       const offset = -3000;
       client.__setOffsetMs(offset); // ensure mock ntp is slow
       // 1.1.0  default verboseHistory false, startOnline true
@@ -300,7 +299,7 @@ describe('v1.1.0 behavior', () => {
 
     });
 
-    test.skip('getHistory method; verboseHistory true', () => {
+    test.skip('getHistory method; details', () => {
       const config = {
         history: 5,
         startOnline: false,

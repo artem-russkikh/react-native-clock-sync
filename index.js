@@ -55,7 +55,6 @@ var clockSync = function (config) {
   this.tickRate = parseFloat(config.syncDelay) || 300;
   if (this.tickRate <= 0) { throw new Error('\'config.syncDelay\' must be greater than 0'); }
   this.tickRate = this.tickRate * 1000;
-  this.verboseHistory = config.verboseHistory || false;
 
   if (this.isOnline) {
     this.syncTime();
@@ -105,9 +104,7 @@ clockSync.prototype.getDelta = function (callback) {
 };
 
 clockSync.prototype.getHistory = function () {
-  // FIXME: deal with verbose
-  // fast way to deep clone since we know the stuff inside delta
-  // is just simple numbers, strings, and maps
+  // FIXME: deal with details
   // {
   //   currentConsecutiveErrorCount: expect.any(Number),
   //   currentServer: objectContaining({
@@ -123,6 +120,9 @@ clockSync.prototype.getHistory = function () {
   //   lastErrorTime: null,
   //   maxConsecutiveErrorCount: expect.any(Number)
   // }
+
+  // fast way to deep clone since we know the stuff inside delta
+  // is just simple numbers, strings, and maps
   return {
     deltas: JSON.parse(JSON.stringify(this.delta))
   };

@@ -18,7 +18,6 @@ describe('Configuration parsing and behavior', () => {
     expect(cs.tickRate).toBe(300000);
     expect(cs.delta).toHaveLength(1); // due to mock
     expect(cs.limit).toBe(10);
-    expect(cs.verboseHistory).toBe(false);
     expect(cs.getTime()).toBeGreaterThan(0);
   });
 
@@ -35,7 +34,6 @@ describe('Configuration parsing and behavior', () => {
     expect(cs.tickRate).toBe(300000);
     expect(cs.delta).toHaveLength(1); // due to mock
     expect(cs.limit).toBe(10);
-    expect(cs.verboseHistory).toBe(false);
     expect(cs.getTime()).toBeGreaterThan(0);
   });
 
@@ -295,18 +293,16 @@ describe('Configuration parsing and behavior', () => {
       expect(cs.delta).toHaveLength(1); // default initial sync
     });
 
-    test('v1.1.0 API additions; cycleServers, startOnline, verboseHistory, getIsOnline', () => {
+    test('v1.1.0 API additions; cycleServers, startOnline, getIsOnline', () => {
       const config = {
         cycleServers: true,
-        startOnline: false,
-        verboseHistory: true
+        startOnline: false
       };
       const cs = new clockSync(config);
       expect(cs.cycleServers).toBe(config.cycleServers);
       expect(cs.isOnline).toBe(config.startOnline);
       expect(cs.getIsOnline()).toBe(false);
       expect(cs.delta).toHaveLength(0); // no initial sync
-      expect(cs.verboseHistory).toBe(true);
     });
 
   });

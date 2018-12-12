@@ -50,8 +50,8 @@ The clock constructor can accept the following options.  **all options are optio
 
 ##### Basic Options
 
-* ```syncDelay``` (number) : The time (in seconds) between each call to an NTP server to get the latest UTC timestamp. Defaults to `300` (which is 5 minutes).
-* ```history``` (number) : The number of delta values that should be maintained and used for calculating your local time drift. Defaults to `10`.
+* ```syncDelay``` (+number) : The time (in seconds) between each call to an NTP server to get the latest UTC timestamp. Defaults to `300` (which is 5 minutes) if not present, zero, or supplied value is not a number. **Supplied value must be > 0**
+* ```history``` (+int) : The number of delta values that should be maintained and used for calculating your local time drift. Defaults to `10` if not present, zero, or supplied value is not a number. **Supplied value must be > 0**
 * ```startOnline``` (boolean) : A flag to control network activity upon clockSync instantiation. Defaults to `true`. (immediate NTP server fetch attempt)
 
 ```javascript
@@ -118,6 +118,10 @@ These are some examples of acceptable server configurations:
 ```
 
 ## Methods
+
+### getHistory()
+
+**FIXME**
 
 ### getIsOnline()
 
