@@ -59,7 +59,8 @@ describe('v1.1.0 behavior', () => {
   });
 
   test('setOnline true; startOnline false', done => {
-    client.__setOffsetMs(-1000); // ensure mock ntp is slow
+    const offset = -1000;
+    client.__setOffsetMs(offset); // ensure mock ntp is slow
     const config = {
       startOnline: false
     };
@@ -80,7 +81,7 @@ describe('v1.1.0 behavior', () => {
       expect(cs.isOnline).toBe(true);
       expect(cs.delta).toHaveLength(2);
       expect(cs.tickId).not.toBeNull();
-      expect(dt).toBeLessThanOrEqual(-1000);
+      expect(dt).toBeLessThanOrEqual(offset);
       done();
     }
 
@@ -89,7 +90,8 @@ describe('v1.1.0 behavior', () => {
   });
 
   test('setOnline false; startOnline true', done => {
-    client.__setOffsetMs(-2000); // ensure mock ntp is slow
+    const offset = -2000;
+    client.__setOffsetMs(offset); // ensure mock ntp is slow
     const config = {
       startOnline: true
     };
@@ -100,7 +102,7 @@ describe('v1.1.0 behavior', () => {
 
     // 1st callback for online delta time
     function cb(dt) {
-      expect(dt).toBeLessThanOrEqual(-2000);
+      expect(dt).toBeLessThanOrEqual(offset);
       cs.setOnline(false);
       cs.getDelta(cb2);
     }
@@ -119,7 +121,8 @@ describe('v1.1.0 behavior', () => {
   });
 
   test('setOnline false; startOnline false', done => {
-    client.__setOffsetMs(-2000); // ensure mock ntp is slow
+    const offset = -2000;
+    client.__setOffsetMs(offset); // ensure mock ntp is slow
     const config = {
       startOnline: false
     };
@@ -149,7 +152,8 @@ describe('v1.1.0 behavior', () => {
   });
 
   test('setOnline true; startOnline true', done => {
-    client.__setOffsetMs(-3000); // ensure mock ntp is slow
+    const offset = -3000;
+    client.__setOffsetMs(offset); // ensure mock ntp is slow
     const config = {
       startOnline: true
     };
@@ -161,7 +165,7 @@ describe('v1.1.0 behavior', () => {
 
     // 1st callback for online delta time
     function cb(dt) {
-      expect(dt).toBeLessThanOrEqual(-3000);
+      expect(dt).toBeLessThanOrEqual(offset);
       cs.setOnline(true); // should have no effect
       cs.getDelta(cb2); // adds 3rd update to delta
     }
@@ -172,7 +176,7 @@ describe('v1.1.0 behavior', () => {
       expect(cs.delta).toHaveLength(3);
       expect(cs.tickId).not.toBeNull();
       expect(cs.tickId).toBe(tid); // timer id should be the same
-      expect(dt).toBeLessThanOrEqual(-3000);
+      expect(dt).toBeLessThanOrEqual(offset);
       done();
     }
 
@@ -188,10 +192,10 @@ describe('v1.1.0 behavior', () => {
     expect(cs.delta).toHaveLength(0);
     // pre-fill delta array
     cs.delta = [
-      5000,
-      10000,
-      5000,
-      2500
+      {dt:5000},
+      {dt:10000},
+      {dt:5000},
+      {dt:2500}
     ]; // avg === 5625
     const now_ish = Date.now();
     const time = cs.getTime();
@@ -222,6 +226,123 @@ describe('v1.1.0 behavior', () => {
 
     beforeEach(() => {
       jest.useFakeTimers();
+    });
+
+    test('getHistory method; general', () => {
+      // 1.1.0 verboseHistory default false
+      const config = {
+        history: 5,
+        startOnline: false,
+        syncDelay: 5
+      };
+      const cs = new clockSync(config);
+      expect(setInterval).not.toBeCalled();
+      let h = cs.getHistory();
+      expect(h).toEqual(expect.objectContaining({
+        deltas: expect.any(Array)
+      }));
+      expect(h.deltas).toHaveLength(0);
+      cs.setOnline(true);
+      h = cs.getHistory();
+      expect(h.deltas).toHaveLength(1);
+      cs.setOnline(false);
+      // advance by 1 tick
+      jest.advanceTimersByTime(config.syncDelay * 1000);
+      h = cs.getHistory();
+      expect(h.deltas).toHaveLength(1); // no new updates
+      cs.setOnline(true);
+      // advance ticks beyond history limit
+      jest.advanceTimersByTime(config.syncDelay * 1000 * (config.history + 2));
+      h = cs.getHistory();
+      expect(h.deltas).toHaveLength(config.history);
+    });
+
+    test('getHistory method; verboseHistory false', () => {
+      const offset = -3000;
+      client.__setOffsetMs(offset); // ensure mock ntp is slow
+      // 1.1.0  default verboseHistory false, startOnline true
+      const config = {
+        history: 5,
+        syncDelay: 5
+      };
+      const cs = new clockSync(config);
+      expect(setInterval).toBeCalled();
+      let h = cs.getHistory();
+      expect(h).toEqual(expect.objectContaining({
+        deltas: expect.any(Array)
+      }));
+      expect(h.deltas).toHaveLength(1);
+      expect(h.deltas[0]).toEqual(expect.objectContaining({
+        dt: expect.any(Number),
+        ntp: expect.any(Number)
+      }));
+      expect(h.deltas[0].dt).not.toBe(0);
+      expect(h.deltas[0].dt).toBeLessThanOrEqual(offset);
+
+      // make sure ntp times are different even when test execution runs really fast
+      client.__setOffsetMs(0);
+      client.__useJitter(true);
+
+      // advance ticks beyond history limit
+      jest.advanceTimersByTime(config.syncDelay * 1000 * (config.history + 2));
+      h = cs.getHistory();
+      expect(h.deltas).toHaveLength(config.history);
+      let prevNtp = 999999;
+      h.deltas.forEach(d => {
+        expect(d).toEqual(expect.objectContaining({
+          dt: expect.any(Number),
+          ntp: expect.any(Number)
+        }));
+        expect(d.dt).not.toBe(0);
+        expect(d.ntp).not.toBe(prevNtp);
+        prevNtp = d.ntp;
+      });
+
+    });
+
+    test.skip('getHistory method; verboseHistory true', () => {
+      const config = {
+        history: 5,
+        startOnline: false,
+        syncDelay: 5,
+        verboseHistory: true
+      };
+      const cs = new clockSync(config);
+      expect(setInterval).not.toBeCalled();
+      let h = cs.getHistory();
+      expect(h).toEqual(expect.objectContaining({
+        currentConsecutiveErrorCount: expect.any(Number),
+        currentServer: objectContaining({
+          server: expect.any(String),
+          port: expect.any(Number)
+        }),
+        deltas: expect.any(Array),
+        errors: expect.any(Array),
+        isInErrorState: expect.any(Boolean),
+        lastSyncTime: expect.any(Number),
+        lastNtpTime: expect.any(Number),
+        lastError: null,
+        lastErrorTime: null,
+        maxConsecutiveErrorCount: expect.any(Number)
+      }));
+      expect(h.deltas).toHaveLength(0);
+      // FIXME: trigger an update
+      expect(h.deltas).toHaveLength(1);
+      expect(h.deltas[0]).toEqual(expect.objectContaining({
+        dt: expect.any(Number),
+        ntp: expect.any(Number)
+      }));
+      // FIXME: trigger an error
+      expect(h.errors).toHaveLength(1);
+      expect(h.errors[0]).toEqual(expect.objectContaining({
+        msg: expect.any(String),
+        server: objectContaining({
+          server: expect.any(String),
+          port: expect.any(Number)
+        }),
+        time: expect.any(Number)
+      }));
+      // FIXME: test more fields
     });
 
     test('interval with startOnline false -> true -> false', () => {

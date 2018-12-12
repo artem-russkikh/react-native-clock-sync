@@ -18,6 +18,7 @@ describe('Configuration parsing and behavior', () => {
     expect(cs.tickRate).toBe(300000);
     expect(cs.delta).toHaveLength(1); // due to mock
     expect(cs.limit).toBe(10);
+    expect(cs.verboseHistory).toBe(false);
     expect(cs.getTime()).toBeGreaterThan(0);
   });
 
@@ -34,7 +35,60 @@ describe('Configuration parsing and behavior', () => {
     expect(cs.tickRate).toBe(300000);
     expect(cs.delta).toHaveLength(1); // due to mock
     expect(cs.limit).toBe(10);
+    expect(cs.verboseHistory).toBe(false);
     expect(cs.getTime()).toBeGreaterThan(0);
+  });
+
+  test('initialize misc. history config values', () => {
+    function make(config) {
+      return () => (new clockSync(config));
+    }
+    // errors
+    expect( make( {history: -300} )).toThrow();
+    expect( make( {history: -12} )).toThrow();
+    expect( make( {history: '-300'} )).toThrow();
+    // invalid, set to default
+    let c = make({history: 'one'})();
+    expect(c.limit).toBe(10);
+    c = make({history: 0})();
+    expect(c.limit).toBe(10);
+    c = make({history: '0'})();
+    expect(c.limit).toBe(10);
+    c = make({history: '-0.9'})(); // special case. gets truncated to an int -0
+    expect(c.limit).toBe(10);
+    // valid
+    c = make({history: '15'})();
+    expect(c.limit).toBe(15);
+    c = make({history: 250})();
+    expect(c.limit).toBe(250);
+    c = make({history: 25.670})(); // floats are truncated
+    expect(c.limit).toBe(25);
+  });
+
+  test('initialize misc. syncDelay config values', () => {
+    function make(config) {
+      return () => (new clockSync(config));
+    }
+    // errors
+    expect( make( {syncDelay: -300} )).toThrow();
+    expect( make( {syncDelay: -12} )).toThrow();
+    expect( make( {syncDelay: '-300'} )).toThrow();
+    expect( make( {syncDelay: '-0.9'} )).toThrow();
+    // invalid, set to default
+    const def = 300 * 1000;
+    let c = make({syncDelay: 'one'})();
+    expect(c.tickRate).toBe(def);
+    c = make({syncDelay: 0})();
+    expect(c.tickRate).toBe(def);
+    c = make({syncDelay: '0'})();
+    expect(c.tickRate).toBe(def);
+    // valid
+    c = make({syncDelay: '15'})();
+    expect(c.tickRate).toBe(15 * 1000);
+    c = make({syncDelay: 250})();
+    expect(c.tickRate).toBe(250 * 1000);
+    c = make({syncDelay: 25.670})();
+    expect(c.tickRate).toBe(25.670 * 1000);
   });
 
   describe('initialize clockSync instance with VALID server configs',  () => {
@@ -241,16 +295,18 @@ describe('Configuration parsing and behavior', () => {
       expect(cs.delta).toHaveLength(1); // default initial sync
     });
 
-    test('v1.1.0 API additions; cycleServers, startOnline, getIsOnline', () => {
+    test('v1.1.0 API additions; cycleServers, startOnline, verboseHistory, getIsOnline', () => {
       const config = {
         cycleServers: true,
-        startOnline: false
+        startOnline: false,
+        verboseHistory: true
       };
       const cs = new clockSync(config);
       expect(cs.cycleServers).toBe(config.cycleServers);
       expect(cs.isOnline).toBe(config.startOnline);
       expect(cs.getIsOnline()).toBe(false);
       expect(cs.delta).toHaveLength(0); // no initial sync
+      expect(cs.verboseHistory).toBe(true);
     });
 
   });
