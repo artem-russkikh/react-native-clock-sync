@@ -175,10 +175,24 @@ NetInfo.isConnected.addEventListener('connectionChange', handleConnectivityChang
 
 **NOTE:** The example above does not account for rapid changes in network state. You may wish to add additional handling to 'de-bounce' such changes. Also, remember to remove the listener and set your clockSync instance to *offline* when done (un-mounting components, shutting down, etc.)
 
-### syncTime()
+### syncTime( *[callback]* )
 
 An on-demand method that will force a sync with an NTP server. Will not sync or update when *offline*.
 
+**NOTE:** You generally do not need to invoke a manual sync since *clockSync* automatically runs sync according to the specified `syncDelay` interval (or its default).
+
+An optional callback function may be supplied to monitor completion/failure of the requested sync. Callback will accept a single `boolean` parameter that indicates success or failure of the requested sync. Callback will always be given `false` when instance is *offline*.
+
 ```javascript
 clock.syncTime();
+```
+
+or
+
+```javascript
+function cb(success) {
+  console.log("sync was" + (success ? "" : " not") + " a success");
+}
+
+clock.syncTime(cb);
 ```

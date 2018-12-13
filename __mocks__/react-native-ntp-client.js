@@ -12,7 +12,7 @@ let __offset_ms = 0;
 
 // custom method to allow tests to set a server delta time
 // can be +/- (values in milliseconds)
-function __setOffsetMs(ms) {
+function __setOffsetMS(ms) {
   __offset_ms = ms;
 }
 
@@ -22,6 +22,11 @@ let __jitter = false;
 // typically shouldn't use jitter when offset !== 0
 function __useJitter(j) {
   __jitter = j;
+}
+
+function __reset() {
+  __offset_ms = 0;
+  __jitter = false;
 }
 
 // custom getNetworkTime that simply calls callback
@@ -42,8 +47,9 @@ function getNetworkTime(s, p, cb) {
 
 /**** mocked API ****/
 client.MOCK_FAILING_SERVER = MOCK_FAILING_SERVER;
-client.__setOffsetMs = __setOffsetMs;
+client.__setOffsetMS = __setOffsetMS;
 client.__useJitter = __useJitter;
+client.__resetForTest = __reset;
 // overrides
 client.getNetworkTime = getNetworkTime;
 

@@ -4,6 +4,7 @@ var clockSync = function (config) {
     config = {};
   }
 
+  // flexible parsing for server configs
   if (config.hasOwnProperty('servers')) {
     this.ntpServers = [];
     try {
@@ -45,9 +46,7 @@ var clockSync = function (config) {
   }
 
   this.currentIndex = 0;
-  this.currentServer = this.ntpServers[this.currentIndex];
   this.cycleServers = config.cycleServers || false;
-  this.delta = [];
   this.isOnline = (config.hasOwnProperty('startOnline') ? config.startOnline : true);
   this.limit = parseInt(config.history) || 10;
   if (this.limit <= 0) { throw new Error('\'config.history\' must be greater than 0'); }
@@ -55,6 +54,20 @@ var clockSync = function (config) {
   this.tickRate = parseFloat(config.syncDelay) || 300;
   if (this.tickRate <= 0) { throw new Error('\'config.syncDelay\' must be greater than 0'); }
   this.tickRate = this.tickRate * 1000;
+
+  // runtime tracking
+  this.historyDetails = {
+    currentConsecutiveErrorCount: 0,
+    currentServer: this.ntpServers[this.currentIndex],
+    deltas: [],
+    errors: [],
+    isInErrorState: false,
+    lastSyncTime: null,
+    lastNtpTime: null,
+    lastError: null,
+    lifetimeErrorCount: 0,
+    maxConsecutiveErrorCount: 0
+  };
 
   if (this.isOnline) {
     this.syncTime();
@@ -65,67 +78,64 @@ var clockSync = function (config) {
 /**
  * @private
  */
-clockSync.prototype.computeDelta = function (ntpDate, update, cb) {
-  var dt = 0;
-  var tempServerTime = 0;
-  var tempLocalTime = 0;
-  if (ntpDate) {
-    tempServerTime = ntpDate.getTime();
-    tempLocalTime = (new Date()).getTime();
-    dt = tempServerTime - tempLocalTime;
+clockSync.prototype.computeDeltaAndUpdateHistory = function (ntpDate) {
+  var tempServerTime = ntpDate.getTime();
+  var tempLocalTime = Date.now();
+  console.log(tempServerTime, tempLocalTime);
+  var dt = tempServerTime - tempLocalTime;
+  if (this.historyDetails.deltas.length === this.limit) {
+    this.historyDetails.deltas.shift();
   }
-  if (update) {
-    if (this.delta.length === this.limit) {
-      this.delta.shift();
-    }
-    this.delta.push({
-      dt: dt,
-      ntp: tempServerTime
-    });
-  }
-  if (cb) {
-    cb(dt);
-  }
+  this.historyDetails.deltas.push({
+    dt: dt,
+    ntp: tempServerTime
+  });
+  this.historyDetails.lastSyncTime = tempLocalTime;
+  this.historyDetails.lastNtpTime = tempServerTime;
+  return dt;
 };
 
+/**
+ * @private
+ */
 clockSync.prototype.getDelta = function (callback) {
   if (this.isOnline) {
-    this.client.getNetworkTime(this.currentServer.server, this.currentServer.port, function (err, date) {
+    var fetchingServer = Object.assign({}, this.historyDetails.currentServer);
+    this.client.getNetworkTime(this.historyDetails.currentServer.server, this.historyDetails.currentServer.port, function (err, date) {
       if (err) {
         console.log('Shifting to backup server');
         this.shiftServer();
+        var ex = err;
+        if (!ex) {
+          ex = new Error('unknown error');
+        } else if (!(ex instanceof Error)) {
+          if (typeof ex === 'string') {
+            ex = new Error(ex);
+          } else {
+            ex = new Error(ex.toString());
+          }
+        }
+        if (callback) {
+          callback(ex, fetchingServer);
+        }
       } else {
-        this.computeDelta(date, true, callback);
+        var delta = this.computeDeltaAndUpdateHistory(date);
+        if (callback) {
+          callback(delta, fetchingServer);
+        }
       }
     }.bind(this))
   } else {
-    this.computeDelta(null, false, callback);
+    if (callback) {
+      callback(0);
+    }
   }
 };
 
 clockSync.prototype.getHistory = function () {
-  // FIXME: deal with details
-  // {
-  //   currentConsecutiveErrorCount: expect.any(Number),
-  //   currentServer: objectContaining({
-  //     server: expect.any(String),
-  //     port: expect.any(Number)
-  //   }),
-  //   deltas: expect.any(Array),
-  //   errors: expect.any(Array),
-  //   isInErrorState: expect.any(Boolean),
-  //   lastSyncTime: expect.any(Number),
-  //   lastNtpTime: expect.any(Number),
-  //   lastError: null,
-  //   lastErrorTime: null,
-  //   maxConsecutiveErrorCount: expect.any(Number)
-  // }
-
-  // fast way to deep clone since we know the stuff inside delta
-  // is just simple numbers, strings, and maps
-  return {
-    deltas: JSON.parse(JSON.stringify(this.delta))
-  };
+  // fast way to deep clone since we know the stuff inside
+  // is JSON serializable
+  return JSON.parse(JSON.stringify(this.historyDetails));
 };
 
 clockSync.prototype.getIsOnline = function () {
@@ -133,11 +143,11 @@ clockSync.prototype.getIsOnline = function () {
 };
 
 clockSync.prototype.getTime = function () {
-  var sum = this.delta.reduce(function (a, b) {
+  var sum = this.historyDetails.deltas.reduce(function (a, b) {
     return a + b.dt;
   }, 0);
-  var avg = Math.round(sum / this.delta.length) || 0;
-  return ((new Date()).getTime() + avg);
+  var avg = Math.round(sum / this.historyDetails.deltas.length) || 0;
+  return (Date.now() + avg);
 };
 
 clockSync.prototype.setOnline = function (online) {
@@ -152,6 +162,9 @@ clockSync.prototype.setOnline = function (online) {
   }
 };
 
+/**
+ * @private
+ */
 clockSync.prototype.shiftServer = function () {
   if (this.cycleServers && this.ntpServers.length > 1) {
     this.currentIndex++;
@@ -160,19 +173,58 @@ clockSync.prototype.shiftServer = function () {
   else if (this.ntpServers[this.currentIndex + 1]) {
     this.currentIndex++;
   }
-  this.currentServer = this.ntpServers[this.currentIndex];
+  this.historyDetails.currentServer = this.ntpServers[this.currentIndex];
 };
 
+/**
+ * @private
+ */
 clockSync.prototype.startTick = function () {
   if (!this.tickId) {
     this.tickId = setInterval(function () {
-      this.getDelta();
+      this.syncTime();
     }.bind(this), this.tickRate);
   }
 };
 
-clockSync.prototype.syncTime = function () {
-  this.getDelta();
+clockSync.prototype.syncTime = function (userCallback) {
+  function internalCallback(result, server) {
+    var success = false;
+    if (this.isOnline) {
+      if (typeof result === 'number') {
+        success = true;
+        this.historyDetails.currentConsecutiveErrorCount = 0;
+        this.historyDetails.isInErrorState = false;
+      } else if (result instanceof Error) {
+        // extract Error data
+        var ed = {
+          name: result.name,
+          message: result.message,
+          server: server,
+          stack: result.stack,
+          time: Date.now()
+        };
+        this.historyDetails.currentConsecutiveErrorCount++;
+        if (this.historyDetails.errors.length === this.limit) {
+          this.historyDetails.errors.shift();
+        }
+        this.historyDetails.errors.push(ed);
+        this.historyDetails.isInErrorState = true;
+        this.historyDetails.lastError = ed;
+        this.historyDetails.lifetimeErrorCount++;
+        this.historyDetails.maxConsecutiveErrorCount = Math.max(
+          this.historyDetails.maxConsecutiveErrorCount,
+          this.historyDetails.currentConsecutiveErrorCount
+        );
+      }
+    }
+
+    if (userCallback) {
+      userCallback(success);
+    }
+  }
+
+  this.getDelta(internalCallback.bind(this));
 };
 
 module.exports = clockSync;
