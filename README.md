@@ -8,6 +8,8 @@ Used to ensure the time used is in sync across distributed systems. The sync is 
 * Computes the delta between the NTP server and the system clock and stores the delta for later use.
 * Uses all the stored deltas to get the average time drift from UTC.
 * Allows for specifying multiple NTP servers as backups in case of network errors.
+* Ability to get historical details on (un)successful syncs, errors, and raw time values
+* Ability to take instance 'offline' (effectively pausing network activity)
 
 ## Getting Started
 Install the module:
