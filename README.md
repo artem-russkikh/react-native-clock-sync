@@ -69,8 +69,8 @@ The clock constructor can accept the following options.  **all options are optio
 
 * `cycleServers` (boolean) : A flag to allow for 'wrapping around' back to the beginning of the servers list (if > 1 are specified). Upon a network error, clockSync will attempt to use the next server in the list until it reaches the end. When `cycleServers === true`, it will wrap back to the first item and move through the list again. Defaults to `false` (advance to last item and remain there regardless of additional errors encountered)
 * `servers` (array) : An optional array of NTP servers to use when looking up time. If no *servers* key exists in the *config* object, the default NTP configuration will be  `pool.ntp.org` at port `123`. Otherwise, items in the array may be in **any** of the following forms (mixed values are allowed):
- * (string) `"ntp.server.name"` - when a single string value is provided, it will be automatically associated with the default port number `123`
- * (object) with the keys `server` and `port`. Only `server` is **required**. If `port` is omitted, it will be defaulted to `123`. Server values must be strings. Port values must be numbers.
+  * (string) `"ntp.server.name"` - when a single string value is provided, it will be automatically associated with the default port number `123`
+  * (object) with the keys `server` and `port`. Only `server` is **required**. If `port` is omitted, it will be defaulted to `123`. Server values must be strings. Port values must be numbers.
 
 These are some examples of acceptable server configurations:
 ```javascript
@@ -129,17 +129,17 @@ Returns an `Object` of historical details generated as *clockSync* runs. It incl
 
 * `currentConsecutiveErrorCount` (int) : Count of current string of errors since entering an error state (`isInErrorState === true`). Resets to `0` upon successful sync.
 * `currentServer` (object) : Object containing server info of the server that will be used for the next sync. Props are:
- * `server` (string) : the NTP server name
- * `port` (int) : the NTP port
+  * `server` (string) : the NTP server name
+  * `port` (int) : the NTP port
 * `deltas` (array&lt;object&gt;) : This array will contain a 'rolling' list of raw time values returned from each successful NTP server sync wrapped in a simple object with the following keys: (**note:** array length is limited to `config.history`; oldest at `index 0`)
- * `dt` (+/- int) : The calculated delta (in ms) between local time and the value returned from NTP.
- * `ntp` (int) : The unix epoch-relative time (in ms) returned from the NTP server. (raw value returned from server) **note**: ```ntp + -1(dt) = local time of sync```  
+  * `dt` (+/- int) : The calculated delta (in ms) between local time and the value returned from NTP.
+  * `ntp` (int) : The unix epoch-relative time (in ms) returned from the NTP server. (raw value returned from server) **note**: ```ntp + -1(dt) = local time of sync```  
 * `errors` (array&lt;object&gt;) : This array will contain a 'rolling' list of any errors that have occurred during sync attempts. (**note:** array length is limited to `config.history`; oldest at `index 0`). The object contains typical fields found in JS `Error`s as well as additional information.
- * `name` (string) : JavaScript Error name
- * `message` (string) : JavaScript Error message
- * `server` (object) : The server that encountered the sync error. Same keys as `currentServer` object. (possibly different values)
- * `stack` (string) : JavaScript Error stack trace (if available)
- * `time` (int) : The **local** unix epoch-relative timestamp when error was encountered (in ms)
+  * `name` (string) : JavaScript Error name
+  * `message` (string) : JavaScript Error message
+  * `server` (object) : The server that encountered the sync error. Same keys as `currentServer` object. (possibly different values)
+  * `stack` (string) : JavaScript Error stack trace (if available)
+  * `time` (int) : The **local** unix epoch-relative timestamp when error was encountered (in ms)
 * `isInErrorState` (boolean) : Flag indicating if the last attempted sync was an error (`true`) Resets to `false` upon successful sync.
 * `lastSyncTime` (int) : The **local** unix epoch-relative timestamp of last successful sync (in ms)
 * `lastNtpTime` (int) : The **NTP** unix epoch-relative timestamp of the last successful sync (raw value returned from server)
