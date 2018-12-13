@@ -50,9 +50,9 @@ The clock constructor can accept the following options.  **all options are optio
 
 ##### Basic Options
 
-* ```syncDelay``` (+number) : The time (in seconds) between each call to an NTP server to get the latest UTC timestamp. Defaults to `300` (which is 5 minutes) if not present, zero, or supplied value is not a number. **Supplied value must be > 0**
-* ```history``` (+int) : The number of delta values that should be maintained and used for calculating your local time drift. Defaults to `10` if not present, zero, or supplied value is not a number. **Supplied value must be > 0**
-* ```startOnline``` (boolean) : A flag to control network activity upon clockSync instantiation. Defaults to `true`. (immediate NTP server fetch attempt)
+* `syncDelay` (+number) : The time (in seconds) between each call to an NTP server to get the latest UTC timestamp. Defaults to `300` (which is 5 minutes) if not present, zero, or supplied value is not a number. **Supplied value must be > 0**
+* `history` (+int) : The number of delta values that should be maintained and used for calculating your local time drift. Defaults to `10` if not present, zero, or supplied value is not a number. **Supplied value must be > 0**
+* `startOnline` (boolean) : A flag to control network activity upon clockSync instantiation. Defaults to `true`. (immediate NTP server fetch attempt)
 
 ```javascript
 {
@@ -65,10 +65,10 @@ The clock constructor can accept the following options.  **all options are optio
 
 ##### Server Options
 
-* ```cycleServers``` (boolean) : A flag to allow for 'wrapping around' back to the beginning of the servers list (if > 1 are specified). Upon a network error, clockSync will attempt to use the next server in the list until it reaches the end. When `cycleServers === true`, it will wrap back to the first item and move through the list again. Defaults to `false` (advance to last item and remain there regardless of additional errors encountered)
-* ```servers``` (array) : An optional array of NTP servers to use when looking up time. If no *servers* key exists in the *config* object, the default NTP configuration will be  `pool.ntp.org` at port `123`. Otherwise, items in the array may be in **any** of the following forms (mixed values are allowed):
+* `cycleServers` (boolean) : A flag to allow for 'wrapping around' back to the beginning of the servers list (if > 1 are specified). Upon a network error, clockSync will attempt to use the next server in the list until it reaches the end. When `cycleServers === true`, it will wrap back to the first item and move through the list again. Defaults to `false` (advance to last item and remain there regardless of additional errors encountered)
+* `servers` (array) : An optional array of NTP servers to use when looking up time. If no *servers* key exists in the *config* object, the default NTP configuration will be  `pool.ntp.org` at port `123`. Otherwise, items in the array may be in **any** of the following forms (mixed values are allowed):
  * (string) `"ntp.server.name"` - when a single string value is provided, it will be automatically associated with the default port number `123`
- * (object) with the keys ```server``` and ```port```. Only `server` is **required**. If `port` is omitted, it will be defaulted to `123`. Server values must be strings. Port values must be numbers.
+ * (object) with the keys `server` and `port`. Only `server` is **required**. If `port` is omitted, it will be defaulted to `123`. Server values must be strings. Port values must be numbers.
 
 These are some examples of acceptable server configurations:
 ```javascript
@@ -121,7 +121,91 @@ These are some examples of acceptable server configurations:
 
 ### getHistory()
 
-**FIXME**
+Returns an `Object` of historical details generated as *clockSync* runs. It includes several fields that can be used to determine the behavior of a running *clockSync* instance. Each call represents an individual 'snapshot' of the current *clockSync* instance. History is not updated when instance is *offline*.
+
+#### Fields
+
+* `currentConsecutiveErrorCount` (int) : Count of current string of errors since entering an error state (`isInErrorState === true`). Resets to `0` upon successful sync.
+* `currentServer` (object) : Object containing server info of the server that will be used for the next sync. Props are:
+ * `server` (string) : the NTP server name
+ * `port` (int) : the NTP port
+* `deltas` (array&lt;object&gt;) : This array will contain a 'rolling' list of raw time values returned from each successful NTP server sync wrapped in a simple object with the following keys: (**note:** array length is limited to `config.history`; oldest at `index 0`)
+ * `dt` (+/- int) : The calculated delta (in ms) between local time and the value returned from NTP.
+ * `ntp` (int) : The unix epoch-relative time (in ms) returned from the NTP server. (raw value returned from server) **note**: ```ntp + -1(dt) = local time of sync```  
+* `errors` (array&lt;object&gt;) : This array will contain a 'rolling' list of any errors that have occurred during sync attempts. (**note:** array length is limited to `config.history`; oldest at `index 0`). The object contains typical fields found in JS `Error`s as well as additional information.
+ * `name` (string) : JavaScript Error name
+ * `message` (string) : JavaScript Error message
+ * `server` (object) : The server that encountered the sync error. Same keys as `currentServer` object. (possibly different values)
+ * `stack` (string) : JavaScript Error stack trace (if available)
+ * `time` (int) : The **local** unix epoch-relative timestamp when error was encountered (in ms)
+* `isInErrorState` (boolean) : Flag indicating if the last attempted sync was an error (`true`) Resets to `false` upon successful sync.
+* `lastSyncTime` (int) : The **local** unix epoch-relative timestamp of last successful sync (in ms)
+* `lastNtpTime` (int) : The **NTP** unix epoch-relative timestamp of the last successful sync (raw value returned from server)
+* `lastError` (object) : The error info of the last sync error that was encountered. Object keys are same as objects in the `errors` array.
+* `lifetimeErrorCount` (int) : A running total of all errors encountered since *clockSync* instance was created.
+* `maxConsecutiveErrorCount` (int) : Greatest number of errors in a single error state (before a successful sync).
+
+#### Example
+
+```javascript
+// sample return value of getHistory
+// dummy values, actual types
+{
+  currentConsecutiveErrorCount: 1,
+  currentServer: {
+    server: 'good.fake.server',
+    port: 123
+  },
+  deltas: [
+    {
+      dt: -169,
+      ntp: 1544681340812
+    },
+    {
+      dt: 487,
+      ntp: 1544681470828
+    }
+  ],
+  errors: [
+    {
+      name: 'Error',
+      message: 'Mock Error',
+      server: {
+        server: 'FAIL.FAIL.FAIL',
+        port: 456
+      },
+      stack: 'Error: Mock Error\n    at Object.getNetworkTime (/Users/xyz/rnative/react-native-clock-sync/__mocks__/react-native-ntp-client.js:37:10)\n    at clockSync.getNetworkTime [as getDelta] (/Users/xyz/rnative/react-native-clock-sync/index.js:103:17)\n    at clockSync.getDelta (/Users/xyz/rnative/react-native-clock-sync/index.js:226:8)\n ... (rest of stack omitted for brevity)',
+      time: 1544681598417
+    },
+    {
+      name: 'Error',
+      message: 'Mock Error',
+      server: {
+        server: 'FAIL.FAIL.FAIL',
+        port: 666
+      },
+      stack: 'Error: Mock Error...(rest of stack omitted for brevity)',
+      time: 1544681706941
+    }
+  ],
+  isInErrorState: true,
+  lastSyncTime: 1544681470341,
+  lastNtpTime: 1544681470828,
+  lastError: {
+    name: 'Error',
+    message: 'Mock Error',
+    server: {
+      server: 'FAIL.FAIL.FAIL',
+      port: 666
+    },
+    stack: 'Error: Mock Error\n    at Object.getNetworkTime (/Users/xyz/rnative/react-native-clock-sync/__mocks__/react-native-ntp-client.js:37:10)\n    at clockSync.getNetworkTime [as getDelta] (/Users/xyz/rnative/react-native-clock-sync/index.js:103:17)\n    at clockSync.getDelta (/Users/xyz/rnative/react-native-clock-sync/index.js:226:8)\n ... (rest of stack omitted for brevity)',
+    time: 1544681598417
+  },
+  lifetimeErrorCount: 6,
+  maxConsecutiveErrorCount: 2
+}
+
+```
 
 ### getIsOnline()
 
