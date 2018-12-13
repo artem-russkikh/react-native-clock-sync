@@ -250,8 +250,13 @@ const config = {
 
 const clock = new clockSync(config);
 
-// this handler will receive the device's network status
-function handleConnectivityChange = isConnected => {
+// set initial state
+NetInfo.isConnected.fetch().then(isConnected => {
+  clock.setOnline(isConnected);
+});
+
+// this handler will receive the device's network status changes
+function handleConnectivityChange (isConnected) {
   clock.setOnline(isConnected);
 }
 
