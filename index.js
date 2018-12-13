@@ -81,7 +81,6 @@ var clockSync = function (config) {
 clockSync.prototype.computeDeltaAndUpdateHistory = function (ntpDate) {
   var tempServerTime = ntpDate.getTime();
   var tempLocalTime = Date.now();
-  console.log(tempServerTime, tempLocalTime);
   var dt = tempServerTime - tempLocalTime;
   if (this.historyDetails.deltas.length === this.limit) {
     this.historyDetails.deltas.shift();
@@ -103,7 +102,6 @@ clockSync.prototype.getDelta = function (callback) {
     var fetchingServer = Object.assign({}, this.historyDetails.currentServer);
     this.client.getNetworkTime(this.historyDetails.currentServer.server, this.historyDetails.currentServer.port, function (err, date) {
       if (err) {
-        console.log('Shifting to backup server');
         this.shiftServer();
         var ex = err;
         if (!ex) {
