@@ -1,0 +1,16 @@
+{
+    "globals": {
+        "clearInterval": false,
+        "console": false,
+        "module": true,
+        "require": false,
+        "setInterval": false
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": 5
+    },
+    "rules": {
+        "no-console": "off"
+    }
+}

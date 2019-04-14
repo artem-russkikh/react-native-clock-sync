@@ -1,0 +1,4 @@
+# testing stuff
+__mocks__/**/*.js
+__tests__/**/*.js
+coverage/**/*.js
